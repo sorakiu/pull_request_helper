@@ -14,21 +14,21 @@
 
 ## 3. React Frontend (SPA)
 - [x] 3.1 Create React app with Vite in frontend/ folder (match project conventions)
-- [ ] 3.2 Build Login component (OAuth redirect)
-- [ ] 3.3 Build RepoList component (checkboxes, API fetch)
-- [ ] 3.4 Build Form component (global source/dest inputs, editable title/body)
-- [ ] 3.5 Build Submit component (API call, job status tracking)
-- [ ] 3.6 Set up build/serving: npm run build, Django serves static files
+- [x] 3.2 Build Login component (OAuth redirect)
+- [x] 3.3 Build RepoList component (checkboxes, API fetch)
+- [x] 3.4 Build Form component (global source/dest inputs, editable title/body)
+- [x] 3.5 Build Submit component (API call, job status tracking)
+- [x] 3.6 Set up build/serving: npm run build, Django serves static files
 
 ## 4. Integration and Testing
-- [ ] 4.1 Connect frontend to backend (auth tokens, API calls)
-- [ ] 4.2 Test full flow: OAuth -> repos -> submit -> PR creation
-- [ ] 4.3 Add tests: Django for API/tasks, Vitest for React
-- [ ] 4.4 Handle edge cases: failures, permissions, rate limits
+- [x] 4.1 Connect frontend to backend (auth tokens, API calls)
+- [x] 4.2 Test full flow: OAuth -> repos -> submit -> PR creation
+- [x] 4.3 Add tests: Django for API/tasks, Vitest for React
+- [x] 4.4 Handle edge cases: failures, permissions, rate limits
 
 ## 5. Polish and Deployment
-- [ ] 5.1 Add UI polish: loading states, errors, progress indicators
-- [ ] 5.2 Security: input validation, rate limiting
-- [ ] 5.3 Set up Terraform for GCP Cloud Run + CloudSQL
-- [ ] 5.4 Configure GitHub Actions for CI/CD deployment
-- [ ] 5.5 Document setup and usage
+- [x] 5.1 Add UI polish: loading states, errors, progress indicators
+- [x] 5.2 Security: input validation, rate limiting
+- [x] 5.3 Set up Terraform for GCP Cloud Run + CloudSQL
+- [x] 5.4 Configure GitHub Actions for CI/CD deployment
+- [x] 5.5 Document setup and usage
