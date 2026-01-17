@@ -15,6 +15,7 @@ interface RepoListProps {
 const RepoList: React.FC<RepoListProps> = ({ selectedRepos, setSelectedRepos }) => {
   const [repos, setRepos] = useState<Repo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRepos = async () => {
@@ -22,6 +23,7 @@ const RepoList: React.FC<RepoListProps> = ({ selectedRepos, setSelectedRepos }) 
         const response = await axios.get('/api/repos/');
         setRepos(response.data);
       } catch (error) {
+        setError('Failed to load repositories. Please check your login.');
         console.error('Failed to fetch repos', error);
       } finally {
         setLoading(false);
@@ -36,22 +38,25 @@ const RepoList: React.FC<RepoListProps> = ({ selectedRepos, setSelectedRepos }) 
     );
   };
 
-  if (loading) return <p>Loading repos...</p>;
+  if (loading) return <p>Loading repositories...</p>;
+  if (error) return <p style={{ color: 'red' }}>{error}</p>;
 
   return (
     <div className="repo-list">
       <h2>Select Repositories</h2>
       {repos.map(repo => (
         <div key={repo.id}>
-          <input
-            type="checkbox"
-            checked={selectedRepos.includes(repo.id)}
-            onChange={() => handleCheckboxChange(repo.id)}
-          />
-          {repo.owner}/{repo.name}
+          <label>
+            <input
+              type="checkbox"
+              checked={selectedRepos.includes(repo.id)}
+              onChange={() => handleCheckboxChange(repo.id)}
+            />
+            {repo.owner}/{repo.name}
+          </label>
         </div>
       ))}
-      <p>Selected: {selectedRepos.length} repos</p>
+      <p>Selected: {selectedRepos.length} repositories</p>
     </div>
   );
 };

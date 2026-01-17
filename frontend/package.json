@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:backend": "vite build && rm -rf ../backend/static/assets ../backend/static/index.html && cp -r dist/* ../backend/static/ && cp ../backend/static/index.html ../backend/templates/index.html",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest"
@@ -14,12 +15,14 @@
     "axios": "^1.13.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.11.0"
+    "react-router-dom": "^7.11.0",
+    "react-toastify": "^11.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",

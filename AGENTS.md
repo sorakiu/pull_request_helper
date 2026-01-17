@@ -52,6 +52,19 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install django
 ```
 
+#### Code Formatting / Linting
+Use Black for Python code formatting and linting:
+```bash
+# Install Black
+pip install black
+
+# Format code
+black .
+
+# Check formatting
+black --check .
+```
+
 ## Build, Lint & Test Commands
 
 All commands should be run from the `frontend/` directory.
