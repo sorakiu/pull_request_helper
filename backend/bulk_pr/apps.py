@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class BulkPrConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'bulk_pr'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "bulk_pr"

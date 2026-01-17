@@ -15,19 +15,33 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='PRJob',
+            name="PRJob",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('repos', models.JSONField()),
-                ('source_branch', models.CharField(default='main', max_length=255)),
-                ('dest_branch', models.CharField(max_length=255)),
-                ('pr_title', models.CharField(max_length=255)),
-                ('pr_body', models.TextField(blank=True)),
-                ('status', models.CharField(default='pending', max_length=20)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('results', models.JSONField(default=dict)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("repos", models.JSONField()),
+                ("source_branch", models.CharField(default="main", max_length=255)),
+                ("dest_branch", models.CharField(max_length=255)),
+                ("pr_title", models.CharField(max_length=255)),
+                ("pr_body", models.TextField(blank=True)),
+                ("status", models.CharField(default="pending", max_length=20)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("results", models.JSONField(default=dict)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

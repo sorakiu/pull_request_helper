@@ -10,10 +10,66 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def validate_environment():
+    """
+    Validate required environment variables for the application.
+
+    Raises ValueError if any required environment variables are missing.
+    Skips validation in test environments.
+    """
+    # Skip validation during testing
+    if (
+        os.environ.get("DJANGO_SETTINGS_MODULE", "").endswith("test")
+        or "test" in sys.argv
+    ):
+        return
+
+    required_vars = [
+        "SECRET_KEY",
+        "DB_NAME",
+        "DB_USER",
+        "DB_PASSWORD",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+    ]
+
+    missing_vars = []
+    for var in required_vars:
+        if not os.environ.get(var):
+            missing_vars.append(var)
+
+    if missing_vars:
+        raise ValueError(
+            f"Missing required environment variables: {', '.join(missing_vars)}. "
+            "Please check your .env file or environment configuration."
+        )
+
+    # Optional but recommended for production
+    recommended_vars = ["CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"]
+    missing_recommended = []
+    for var in recommended_vars:
+        if not os.environ.get(var):
+            missing_recommended.append(var)
+
+    if missing_recommended:
+        import warnings
+
+        warnings.warn(
+            f"Missing recommended environment variables: {', '.join(missing_recommended)}. "
+            "Using default values which may not be suitable for production."
+        )
+
+
+# Validate environment on startup
+validate_environment()
 
 
 # Quick-start development settings - unsuitable for production
@@ -25,7 +81,7 @@ SECRET_KEY = "django-insecure-85f$4f8#*in*nhnp900@+3%(p!x^f^liiui51enukjlghnj-35
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "fierce"]
 
 
 # Application definition
@@ -69,7 +125,7 @@ ROOT_URLCONF = "pr_helper.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -89,8 +145,12 @@ WSGI_APPLICATION = "pr_helper.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("DB_NAME", "pr_helper"),
+        "USER": os.environ.get("DB_USER", "pr_user"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "pr_pass"),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
 
@@ -129,7 +189,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -139,8 +200,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Allauth settings
 SITE_ID = 1
 ACCOUNT_EMAIL_VERIFICATION = "none"
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
-ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_ALLOW_SIGNUP = False  # Only allow signup via GitHub OAuth
+SOCIALACCOUNT_STORE_TOKENS = True  # Store OAuth tokens for API access
+
+# GitHub OAuth provider settings
+SOCIALACCOUNT_PROVIDERS = {
+    "github": {
+        "SCOPE": ["repo", "user"],
+    }
+}
 
 # REST framework
 REST_FRAMEWORK = {
@@ -154,16 +222,67 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
+# Session cookie settings for authentication
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
 # Celery settings
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get(
+    "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
+)
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Logging
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "bulk_pr.tasks": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}
+
 # Static files
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = BASE_DIR / "staticfiles_collected"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    "django.contrib.auth.backends.ModelBackend",
+    # `allauth` specific authentication methods, such as login by email
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# After login, redirect to frontend
+LOGIN_REDIRECT_URL = "/"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/"
