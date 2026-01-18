@@ -24,15 +24,11 @@ from django.views.static import serve
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("accounts/", include("allauth.urls")),
-    path("api/auth/", include("allauth.urls")),
+    path('accounts/', include('allauth.urls')),
+    path('api/auth/', include('allauth.urls')),
     path("api/", include("bulk_pr.urls")),
     # Serve frontend assets directly from the static folder
-    re_path(
-        r"^assets/(?P<path>.*)$",
-        serve,
-        {"document_root": settings.BASE_DIR / "static" / "assets"},
-    ),
+    re_path(r'^assets/(?P<path>.*)$', serve, {'document_root': settings.BASE_DIR / 'static' / 'assets'}),
     re_path(
         r"^(?!admin/|accounts/|api/|assets/|static/).*$",
         TemplateView.as_view(template_name="index.html"),
