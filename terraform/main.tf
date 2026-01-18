@@ -291,6 +291,21 @@ resource "google_cloud_run_service" "web" {
           value = var.allowed_hosts
         }
 
+        env {
+          name  = "TAILSCALE_ENABLED"
+          value = var.tailscale_enabled ? "true" : "false"
+        }
+
+        env {
+          name = "TAILSCALE_AUTH_KEY"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.tailscale_auth_key.secret_id
+              key  = "latest"
+            }
+          }
+        }
+
         startup_probe {
           http_get {
             path = "/health/"
@@ -421,6 +436,21 @@ resource "google_cloud_run_service" "worker" {
         env {
           name  = "CELERY_RESULT_BACKEND"
           value = "redis://${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
+        }
+
+        env {
+          name  = "TAILSCALE_ENABLED"
+          value = var.tailscale_enabled ? "true" : "false"
+        }
+
+        env {
+          name = "TAILSCALE_AUTH_KEY"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.tailscale_auth_key.secret_id
+              key  = "latest"
+            }
+          }
         }
       }
     }
