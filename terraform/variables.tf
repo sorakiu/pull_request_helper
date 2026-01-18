@@ -9,31 +9,61 @@ variable "region" {
   default     = "us-central1"
 }
 
-variable "docker_image" {
-  description = "Docker image for Cloud Run"
+variable "environment" {
+  description = "Environment name (e.g., dev, staging, production)"
+  type        = string
+  default     = "production"
+}
+
+variable "web_image" {
+  description = "Docker image for web Cloud Run service"
   type        = string
 }
 
-variable "secret_key" {
-  description = "Django SECRET_KEY"
+variable "worker_image" {
+  description = "Docker image for worker Cloud Run service"
   type        = string
-  sensitive   = true
-}
-
-variable "github_client_id" {
-  description = "GitHub OAuth Client ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "github_client_secret" {
-  description = "GitHub OAuth Client Secret"
-  type        = string
-  sensitive   = true
 }
 
 variable "db_password" {
   description = "Database password"
   type        = string
   sensitive   = true
+}
+
+variable "db_tier" {
+  description = "Cloud SQL instance tier"
+  type        = string
+  default     = "db-f1-micro"
+}
+
+variable "allowed_hosts" {
+  description = "Comma-separated list of allowed hosts for Django"
+  type        = string
+  default     = "*"
+}
+
+variable "allow_public_access" {
+  description = "Allow public access to web service (false for internal VPC only)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_monitoring" {
+  description = "Enable Cloud Monitoring uptime checks and alerts"
+  type        = bool
+  default     = true
+}
+
+variable "tailscale_enabled" {
+  description = "Enable optional Tailscale connection for private access"
+  type        = bool
+  default     = false
+}
+
+variable "tailscale_auth_key" {
+  description = "Tailscale auth key for authentication (required when tailscale_enabled=true)"
+  type        = string
+  sensitive   = true
+  default     = ""
 }
