@@ -2,60 +2,169 @@ name: Deploy to GCP
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  GCP_REGION: us-central1
+  WEB_IMAGE: gcr.io/${{ secrets.GCP_PROJECT_ID }}/pr-helper-web
+  WORKER_IMAGE: gcr.io/${{ secrets.GCP_PROJECT_ID }}/pr-helper-worker
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          cd backend
+          python manage.py test
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Install dependencies
-      run: |
-        cd backend
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-    - name: Run tests
-      run: |
-        cd backend
-        python manage.py test
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
-    - name: Build frontend
-      run: |
-        cd frontend
-        npm ci
-        npm run build
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
 
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Build and push web Docker image
+        run: |
+          docker build -t $WEB_IMAGE:${{ github.sha }} -t $WEB_IMAGE:latest .
+          docker push $WEB_IMAGE:${{ github.sha }}
+          docker push $WEB_IMAGE:latest
 
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push worker Docker image
+        run: |
+          docker build -f backend/Dockerfile.celery -t $WORKER_IMAGE:${{ github.sha }} -t $WORKER_IMAGE:latest .
+          docker push $WORKER_IMAGE:${{ github.sha }}
+          docker push $WORKER_IMAGE:latest
 
-    - name: Configure Docker for GCP
-      run: gcloud auth configure-docker
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
 
-    - name: Build and push Docker image
-      run: |
-        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/pr-helper:${{ github.sha }} .
-        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/pr-helper:${{ github.sha }}
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
-    - name: Deploy to Cloud Run
-      run: |
-        gcloud run deploy pr-helper --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/pr-helper:${{ github.sha }} --platform managed --region us-central1 --allow-unauthenticated
+       - name: Terraform Plan
+         run: |
+           cd terraform
+           terraform plan \
+             -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+             -var="web_image=$WEB_IMAGE:${{ github.sha }}" \
+             -var="worker_image=$WORKER_IMAGE:${{ github.sha }}" \
+             -var="db_password=${{ secrets.DB_PASSWORD }}" \
+             -var="allowed_hosts=${{ secrets.ALLOWED_HOSTS }}" \
+             -var="tailscale_enabled=${{ secrets.TAILSCALE_ENABLED || 'false' }}" \
+             -var="tailscale_auth_key=${{ secrets.TAILSCALE_AUTH_KEY || '' }}" \
+             -out=tfplan
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan
+
+      - name: Get Cloud Run service URL
+        id: get-url
+        run: |
+          URL=$(gcloud run services describe pr-helper-web --region=$GCP_REGION --format='value(status.url)')
+          echo "service_url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Run database migrations
+        run: |
+          gcloud run jobs create pr-helper-migrate \
+            --image=$WEB_IMAGE:${{ github.sha }} \
+            --region=$GCP_REGION \
+            --service-account=pr-helper-cloudrun@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --set-env-vars="USE_CLOUD_SQL_CONNECTOR=True" \
+            --set-secrets="SECRET_KEY=django-secret-key:latest,GITHUB_CLIENT_ID=github-client-id:latest,GITHUB_CLIENT_SECRET=github-client-secret:latest,DB_PASSWORD=db-password:latest" \
+            --vpc-connector=pr-helper-connector \
+            --command="python" \
+            --args="manage.py,migrate,--noinput" \
+            --execute-now \
+            --wait || true
+
+      - name: Health check validation
+        run: |
+          echo "Waiting for service to be ready..."
+          sleep 30
+          MAX_ATTEMPTS=10
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.get-url.outputs.service_url }}/health/" || echo "000")
+            
+            if [ "$STATUS_CODE" = "200" ]; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            
+            echo "Attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS: Health check returned $STATUS_CODE"
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep 10
+          done
+          
+          echo "❌ Health check failed after $MAX_ATTEMPTS attempts"
+          exit 1
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "🚀 Deployment successful!"
+          echo "Web service URL: ${{ steps.get-url.outputs.service_url }}"
+          echo "Web image: $WEB_IMAGE:${{ github.sha }}"
+          echo "Worker image: $WORKER_IMAGE:${{ github.sha }}"
