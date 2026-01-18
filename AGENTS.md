@@ -250,14 +250,21 @@ export const Button: React.FC<ButtonProps> = ({
 
 ### Error Handling
 ```typescript
+// Helper to safely extract error message
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message
+  return String(error)
+}
+
 // Use try-catch for async operations
 const fetchUser = async (userId: string): Promise<User | null> => {
   try {
     const response = await apiService.get(`/users/${userId}`)
     return response.data
   } catch (error) {
+    const errorMessage = getErrorMessage(error)
     console.error('Failed to fetch user:', error)
-    throw new Error(`User fetch failed: ${error.message}`)
+    throw new Error(`User fetch failed: ${errorMessage}`)
   }
 }
 
@@ -410,7 +417,7 @@ Configure `lint-staged` in `package.json`:
 ```json
 {
   "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix", "vitest run --run"],
+    "*.{ts,tsx}": ["eslint --fix", "vitest run"],
     "*.{css,scss}": ["stylelint --fix"]
   }
 }
@@ -499,5 +506,4 @@ When implementing the Django backend:
 - [Vitest Documentation](https://vitest.dev/)
 - [Django Documentation](https://docs.djangoproject.com/)
 
-Remember: Always run tests and linting before committing. Follow the established patterns and conventions to maintain code quality across the project.</content>
-<parameter name="filePath">AGENTS.md
+Remember: Always run tests and linting before committing. Follow the established patterns and conventions to maintain code quality across the project.

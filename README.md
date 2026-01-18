@@ -50,7 +50,7 @@ A modern web application for bulk pull request creation across multiple GitHub r
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/pull_request_helper.git
+   git clone https://github.com/sorakiu/pull_request_helper
    cd pull_request_helper
    ```
 

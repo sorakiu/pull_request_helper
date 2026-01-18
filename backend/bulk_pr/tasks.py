@@ -1,6 +1,6 @@
 import logging
 import json
-import requests
+from github import Github, Auth, GithubException
 from celery import shared_task
 from .models import PRJob
 from allauth.socialaccount.models import SocialToken
@@ -24,23 +24,17 @@ def create_bulk_prs(job_id):
         )
         logger.info(f"GitHub token found for user {job.user.username}")
         
-        headers = {"Authorization": f"token {social_token.token}"}
+        # Initialize PyGithub client with OAuth token
+        auth = Auth.Token(social_token.token)
+        g = Github(auth=auth)
         
-        # Check token scopes
-        user_response = requests.get("https://api.github.com/user", headers=headers)
-        logger.info(f"Token scopes: {user_response.headers.get('x-oauth-scopes', 'Not available')}")
+        # Fetch user's repos from GitHub
+        user = g.get_user()
+        all_repos = user.get_repos()
+        logger.info(f"Fetched repos from GitHub for user {user.login}")
         
-        # Fetch user's repos from GitHub to get full details (owner/name)
-        repos_response = requests.get(
-            "https://api.github.com/user/repos",
-            headers=headers,
-        )
-        repos_response.raise_for_status()
-        all_repos = repos_response.json()
-        logger.info(f"Fetched {len(all_repos)} repos from GitHub")
-        
-        # Build a map of repo ID to repo details
-        repo_map = {repo["id"]: repo for repo in all_repos}
+        # Build a map of repo ID to repo object
+        repo_map = {repo.id: repo for repo in all_repos}
         
         results = {}
 
@@ -50,61 +44,43 @@ def create_bulk_prs(job_id):
                 if repo_id not in repo_map:
                     raise ValueError(f"Repo ID {repo_id} not found in user's repos")
                 
-                repo_info = repo_map[repo_id]
-                repo_owner = repo_info["owner"]["login"]
-                repo_name = repo_info["name"]
+                repo = repo_map[repo_id]
+                repo_owner = repo.owner.login
+                repo_name = repo.name
                 logger.info(f"Repo details: {repo_owner}/{repo_name}")
-                logger.info(f"Repo permissions: admin={repo_info.get('permissions', {}).get('admin')}, push={repo_info.get('permissions', {}).get('push')}, pull={repo_info.get('permissions', {}).get('pull')}")
-                logger.info(f"Repo private: {repo_info.get('private')}")
-                logger.info(f"Repo has_issues: {repo_info.get('has_issues')}, has_projects: {repo_info.get('has_projects')}")
+                logger.info(f"Repo permissions: admin={repo.permissions.admin}, push={repo.permissions.push}, pull={repo.permissions.pull}")
+                logger.info(f"Repo private: {repo.private}")
+                logger.info(f"Repo has_issues: {repo.has_issues}, has_projects: {repo.has_projects}")
                 
-                # Check if pull requests are enabled (they're usually enabled if has_issues is True or if it's not explicitly disabled)
-                if not repo_info.get('has_issues'):
-                    logger.warning(f"Pull requests might be disabled on {repo_owner}/{repo_name}")
+                # Check if repository is archived (PRs cannot be created on archived repos)
+                if repo.archived:
+                    logger.warning(f"Repository {repo_owner}/{repo_name} is archived - PRs cannot be created")
                 
                 # Check if branches exist
-                for branch in [job.source_branch, job.dest_branch]:
-                    branch_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/branches/{branch}"
-                    branch_response = requests.get(branch_url, headers=headers)
-                    logger.info(f"Branch check {branch}: status {branch_response.status_code}")
-                    if branch_response.status_code == 404:
-                        raise ValueError(f"Branch '{branch}' not found in {repo_owner}/{repo_name}")
+                for branch_name in [job.source_branch, job.dest_branch]:
+                    try:
+                        branch = repo.get_branch(branch_name)
+                        logger.info(f"Branch '{branch_name}' found in {repo_owner}/{repo_name}")
+                    except GithubException as e:
+                        if e.status == 404:
+                            raise ValueError(f"Branch '{branch_name}' not found in {repo_owner}/{repo_name}")
+                        raise
                 
-                # Create PR via GitHub API
-                pr_data = {
-                    "title": job.pr_title,
-                    "head": job.source_branch,
-                    "base": job.dest_branch,
-                    "body": job.pr_body or "",
-                }
-                logger.info(f"PR data: {pr_data}")
+                # Create PR via PyGithub
+                pr_title = job.pr_title
+                pr_body = job.pr_body or ""
+                logger.info(f"Creating PR: title='{pr_title}', head={job.source_branch}, base={job.dest_branch}")
                 
-                url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/pulls"
-                logger.info(f"GitHub API URL: {url}")
-                logger.info(f"Request headers: {dict(headers)}")
-                logger.info(f"Request body (JSON): {json.dumps(pr_data)}")
-                
-                response = requests.post(
-                    url,
-                    json=pr_data,
-                    headers=headers,
+                pr = repo.create_pull(
+                    title=pr_title,
+                    body=pr_body,
+                    head=job.source_branch,
+                    base=job.dest_branch,
                 )
-                logger.info(f"GitHub API response status: {response.status_code}")
-                logger.info(f"Response headers: {dict(response.headers)}")
+                logger.info(f"PR created successfully: {pr.html_url}")
+                results[repo_id] = {"url": pr.html_url, "number": pr.number}
                 
-                # Log full response for debugging
-                try:
-                    response_json = response.json()
-                    logger.info(f"GitHub API response JSON: {response_json}")
-                except:
-                    logger.info(f"GitHub API response text: {response.text}")
-                
-                response.raise_for_status()
-                pr = response.json()
-                results[repo_id] = {"url": pr["html_url"], "number": pr["number"]}
-                logger.info(f"PR created successfully: {pr['html_url']}")
-                
-            except (requests.RequestException, ValueError) as e:
+            except (GithubException, ValueError) as e:
                 logger.error(f"Error processing repo {repo_id}: {str(e)}", exc_info=True)
                 results[repo_id] = {"error": str(e)}
 

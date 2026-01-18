@@ -115,13 +115,16 @@ class JobCreateView(APIView):
 
     def post(self, request):
         repos = request.data.get("repos", [])
-        source_branch = request.data.get("source_branch", "main")
+        source_branch = request.data.get("source_branch")
         dest_branch = request.data.get("dest_branch")
+
+        if not repos or not source_branch or not dest_branch:
+            return Response(
+                {"error": "repos, source_branch, and dest_branch required"}, status=400
+            )
+
         pr_title = request.data.get("pr_title", f"{source_branch} -> {dest_branch}")
         pr_body = request.data.get("pr_body", "")
-
-        if not repos or not dest_branch:
-            return Response({"error": "repos and dest_branch required"}, status=400)
 
         job = PRJob.objects.create(
             user=request.user,
