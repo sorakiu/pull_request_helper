@@ -241,6 +241,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [ ] GitHub App integration for organization-wide access
 - [ ] Advanced branch conflict detection
 - [ ] Slack/Discord notifications for job completion
+- [ ] scheduled jobs / triggered jobs
 
 ---
 

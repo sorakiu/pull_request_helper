@@ -76,12 +76,16 @@ validate_environment()
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-85f$4f8#*in*nhnp900@+3%(p!x^f^liiui51enukjlghnj-35"
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-85f$4f8#*in*nhnp900@+3%(p!x^f^liiui51enukjlghnj-35"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "fierce"]
+ALLOWED_HOSTS = os.environ.get(
+    "ALLOWED_HOSTS", "localhost,127.0.0.1,fierce"
+).split(",")
 
 
 # Application definition
@@ -143,16 +147,53 @@ WSGI_APPLICATION = "pr_helper.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "pr_helper"),
-        "USER": os.environ.get("DB_USER", "pr_user"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "pr_pass"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-    }
-}
+# Cloud SQL connection helper
+def get_database_config():
+    """Configure database connection for Cloud SQL or standard PostgreSQL"""
+    if os.environ.get("USE_CLOUD_SQL_CONNECTOR") == "True":
+        # Use Cloud SQL Python Connector for private IP connection
+        from google.cloud.sql.connector import Connector
+        import pg8000
+
+        instance_connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME")
+        db_user = os.environ.get("DB_USER", "pr_user")
+        db_pass = os.environ.get("DB_PASSWORD")
+        db_name = os.environ.get("DB_NAME", "pr_helper")
+
+        connector = Connector()
+
+        def getconn():
+            conn = connector.connect(
+                instance_connection_name,
+                "pg8000",
+                user=db_user,
+                password=db_pass,
+                db=db_name,
+            )
+            return conn
+
+        return {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": db_name,
+            "USER": db_user,
+            "PASSWORD": db_pass,
+            "HOST": "",
+            "PORT": "",
+            "OPTIONS": {"connect_timeout": 60},
+        }
+    else:
+        # Standard PostgreSQL connection
+        return {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "pr_helper"),
+            "USER": os.environ.get("DB_USER", "pr_user"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "pr_pass"),
+            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "PORT": os.environ.get("DB_PORT", "5432"),
+        }
+
+
+DATABASES = {"default": get_database_config()}
 
 
 # Password validation
