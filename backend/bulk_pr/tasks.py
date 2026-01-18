@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def create_bulk_prs(job_id):
+    job = None
     try:
         logger.info(f"Starting bulk PR creation for job {job_id}")
         
@@ -77,6 +78,7 @@ def create_bulk_prs(job_id):
         
     except Exception as e:
         logger.error(f"Error in create_bulk_prs: {str(e)}", exc_info=True)
-        job.status = "failed"
-        job.results = {"error": str(e)}
-        job.save()
+        if job is not None:
+            job.status = "failed"
+            job.results = {"error": str(e)}
+            job.save()
