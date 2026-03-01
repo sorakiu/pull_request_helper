@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import axios from 'axios'
@@ -167,8 +167,8 @@ describe('Form', () => {
   })
 
   it('shows submitting state during form submission', async () => {
-    // Mock a slow API call that doesn't resolve immediately
-    mockedAxios.post.mockImplementation(() => new Promise(() => {})) // Never resolves
+    // Mock a slow onSubmit that doesn't resolve immediately
+    mockOnSubmit.mockImplementation(() => new Promise(() => {})) // Never resolves
 
     const user = userEvent.setup()
     render(<Form {...defaultProps} />)

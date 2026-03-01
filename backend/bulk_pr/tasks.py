@@ -8,19 +8,27 @@ from allauth.socialaccount.models import SocialToken
 logger = logging.getLogger(__name__)
 
 
+class MissingTokenError(Exception):
+    """Raised when user's GitHub token is not found."""
+    pass
+
+
 @shared_task
 def create_bulk_prs(job_id):
     job = None
     try:
         logger.info(f"Starting bulk PR creation for job {job_id}")
-        
+
         job = PRJob.objects.get(id=job_id)
         job.status = "processing"
         job.save()
 
-        social_token = SocialToken.objects.get(
-            account__user=job.user, account__provider="github"
-        )
+        try:
+            social_token = SocialToken.objects.get(
+                account__user=job.user, account__provider="github"
+            )
+        except SocialToken.DoesNotExist:
+            raise MissingTokenError("GitHub token not found for user")
         
         # Initialize PyGithub client with OAuth token
         auth = Auth.Token(social_token.token)
@@ -54,7 +62,7 @@ def create_bulk_prs(job_id):
                         repo.get_branch(branch_name)
                     except GithubException as e:
                         if e.status == 404:
-                            raise ValueError(f"Branch '{branch_name}' not found in {repo_owner}/{repo_name}")
+                            raise ValueError(f"Branch '{branch_name}' not found in {repo_owner}/{repo_name}") from e
                         raise
                 
                 # Create PR via PyGithub

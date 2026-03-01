@@ -5,6 +5,7 @@ This module contains Django REST Framework views for handling GitHub OAuth,
 repository management, and bulk pull request creation jobs.
 """
 
+import logging
 import requests
 from django.conf import settings
 from rest_framework.views import APIView
@@ -17,6 +18,8 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from allauth.socialaccount.models import SocialToken
 from .models import PRJob
 from .tasks import create_bulk_prs
+
+logger = logging.getLogger(__name__)
 
 
 class RepoListView(APIView):
@@ -37,7 +40,7 @@ class RepoListView(APIView):
             )
             headers = {"Authorization": f"token {social_token.token}"}
             response = requests.get(
-                "https://api.github.com/user/repos", headers=headers
+                "https://api.github.com/user/repos", headers=headers, timeout=30
             )
             response.raise_for_status()
             repos = response.json()
@@ -53,8 +56,9 @@ class RepoListView(APIView):
             return Response(data)
         except SocialToken.DoesNotExist:
             return Response({"error": "GitHub token not found"}, status=400)
-        except requests.RequestException as e:
-            return Response({"error": str(e)}, status=500)
+        except requests.RequestException:
+            logger.exception("Failed to fetch repositories from GitHub")
+            return Response({"error": "Failed to fetch repositories from GitHub"}, status=500)
 
 
 class CSRFTokenView(APIView):
