@@ -43,11 +43,16 @@ def create_bulk_prs(job_id):
         
         results = {}
 
-        for repo_id in job.repos:
+        for raw_repo_id in job.repos:
             try:
+                try:
+                    repo_id = int(raw_repo_id)
+                except (TypeError, ValueError):
+                    raise ValueError(f"Invalid repo ID: {raw_repo_id!r}")
+
                 if repo_id not in repo_map:
                     raise ValueError(f"Repo ID {repo_id} not found in user's repos")
-                
+
                 repo = repo_map[repo_id]
                 repo_owner = repo.owner.login
                 repo_name = repo.name

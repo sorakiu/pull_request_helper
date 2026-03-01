@@ -296,12 +296,12 @@ resource "google_cloud_run_service" "web" {
 
         env {
           name  = "CELERY_BROKER_URL"
-          value = "redis://${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
+          value = "redis://:${google_redis_instance.cache.auth_string}@${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
         }
 
         env {
           name  = "CELERY_RESULT_BACKEND"
-          value = "redis://${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
+          value = "redis://:${google_redis_instance.cache.auth_string}@${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
         }
 
         env {
@@ -314,12 +314,15 @@ resource "google_cloud_run_service" "web" {
           value = var.tailscale_enabled ? "true" : "false"
         }
 
-        env {
-          name = "TAILSCALE_AUTH_KEY"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.tailscale_auth_key.secret_id
-              key  = "latest"
+        dynamic "env" {
+          for_each = var.tailscale_enabled ? [1] : []
+          content {
+            name = "TAILSCALE_AUTH_KEY"
+            value_from {
+              secret_key_ref {
+                name = google_secret_manager_secret.tailscale_auth_key.secret_id
+                key  = "latest"
+              }
             }
           }
         }
@@ -448,12 +451,12 @@ resource "google_cloud_run_service" "worker" {
 
         env {
           name  = "CELERY_BROKER_URL"
-          value = "redis://${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
+          value = "redis://:${google_redis_instance.cache.auth_string}@${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
         }
 
         env {
           name  = "CELERY_RESULT_BACKEND"
-          value = "redis://${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
+          value = "redis://:${google_redis_instance.cache.auth_string}@${google_redis_instance.cache.host}:${google_redis_instance.cache.port}/0"
         }
 
         env {
@@ -461,12 +464,15 @@ resource "google_cloud_run_service" "worker" {
           value = var.tailscale_enabled ? "true" : "false"
         }
 
-        env {
-          name = "TAILSCALE_AUTH_KEY"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.tailscale_auth_key.secret_id
-              key  = "latest"
+        dynamic "env" {
+          for_each = var.tailscale_enabled ? [1] : []
+          content {
+            name = "TAILSCALE_AUTH_KEY"
+            value_from {
+              secret_key_ref {
+                name = google_secret_manager_secret.tailscale_auth_key.secret_id
+                key  = "latest"
+              }
             }
           }
         }
@@ -506,7 +512,7 @@ resource "google_cloud_run_service_iam_member" "noauth_web" {
 
 # Cloud Monitoring uptime check
 resource "google_monitoring_uptime_check_config" "health_check" {
-  count        = var.enable_monitoring ? 1 : 0
+  count        = var.enable_monitoring && var.allow_public_access ? 1 : 0
   display_name = "pr-helper-uptime-check"
   timeout      = "10s"
   period       = "300s"

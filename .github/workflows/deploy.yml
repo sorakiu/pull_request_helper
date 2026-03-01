@@ -126,7 +126,7 @@ jobs:
 
       - name: Run database migrations
         run: |
-          gcloud run jobs create pr-helper-migrate \
+          gcloud run jobs deploy pr-helper-migrate \
             --image="$WEB_IMAGE:${{ github.sha }}" \
             --region="$GCP_REGION" \
             --service-account=pr-helper-cloudrun@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
@@ -134,8 +134,9 @@ jobs:
             --set-secrets="SECRET_KEY=django-secret-key:latest,GITHUB_CLIENT_ID=github-client-id:latest,GITHUB_CLIENT_SECRET=github-client-secret:latest,DB_PASSWORD=db-password:latest" \
             --vpc-connector=pr-helper-connector \
             --command="python" \
-            --args="manage.py,migrate,--noinput" \
-            --execute-now \
+            --args="manage.py,migrate,--noinput"
+          gcloud run jobs execute pr-helper-migrate \
+            --region="$GCP_REGION" \
             --wait
 
       - name: Health check validation
