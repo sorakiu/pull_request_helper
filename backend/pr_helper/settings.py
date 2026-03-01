@@ -76,9 +76,7 @@ validate_environment()
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY", "django-insecure-85f$4f8#*in*nhnp900@+3%(p!x^f^liiui51enukjlghnj-35"
-)
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "True") == "True"
@@ -151,35 +149,21 @@ WSGI_APPLICATION = "pr_helper.wsgi.application"
 def get_database_config():
     """Configure database connection for Cloud SQL or standard PostgreSQL"""
     if os.environ.get("USE_CLOUD_SQL_CONNECTOR") == "True":
-        # Use Cloud SQL Python Connector for private IP connection
-        from google.cloud.sql.connector import Connector
-        import pg8000
-
-        instance_connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME")
+        # Use Cloud SQL Unix socket connection (automatic with Cloud Run + VPC)
+        # Cloud Run connects via Unix socket at /cloudsql/INSTANCE_CONNECTION_NAME
         db_user = os.environ.get("DB_USER", "pr_user")
         db_pass = os.environ.get("DB_PASSWORD")
         db_name = os.environ.get("DB_NAME", "pr_helper")
+        instance_connection_name = os.environ.get("CLOUD_SQL_CONNECTION_NAME", "")
 
-        connector = Connector()
-
-        def getconn():
-            conn = connector.connect(
-                instance_connection_name,
-                "pg8000",
-                user=db_user,
-                password=db_pass,
-                db=db_name,
-            )
-            return conn
-
+        # Use Unix socket for Cloud SQL connection
         return {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": db_name,
             "USER": db_user,
             "PASSWORD": db_pass,
-            "HOST": "",
+            "HOST": f"/cloudsql/{instance_connection_name}",
             "PORT": "",
-            "OPTIONS": {"connect_timeout": 60},
         }
     else:
         # Standard PostgreSQL connection
@@ -187,7 +171,7 @@ def get_database_config():
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.environ.get("DB_NAME", "pr_helper"),
             "USER": os.environ.get("DB_USER", "pr_user"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", "pr_pass"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
             "HOST": os.environ.get("DB_HOST", "localhost"),
             "PORT": os.environ.get("DB_PORT", "5432"),
         }
@@ -315,7 +299,14 @@ LOGGING = {
 
 # Static files
 STATIC_ROOT = BASE_DIR / "staticfiles_collected"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`

@@ -93,7 +93,7 @@ Archive a completed change in the experimental workflow.
 
 **Output On Success**
 
-```
+```markdown
 ## Archive Complete
 
 **Change:** <change-name>

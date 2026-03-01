@@ -51,11 +51,12 @@ After deployment:
 1. Ensure your local machine is connected to the same Tailscale network
 2. Find the Tailscale IP of your deployed service:
    ```bash
-   # On your local machine connected to Tailscale
-   tailscale ip -4  # Shows your Tailscale IP
-   ping <deployment-hostname>  # Or check Tailscale admin console
+   # Get the deployment device's IP from the Tailscale admin console,
+   # or resolve it by hostname:
+   ping <deployment-hostname>
+   # Or check: https://login.tailscale.com/admin/machines
    ```
-3. Access the application at `http://<tailscale-ip>:8080`
+3. Access the application at `http://<deployment-tailscale-ip>:8080`
 
 ## Configuration Options
 

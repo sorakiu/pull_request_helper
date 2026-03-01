@@ -2,9 +2,13 @@ FROM python:3.12-slim as builder
 
 WORKDIR /app
 
-# Install Tailscale and dependencies
-RUN apt-get update && apt-get install -y curl && \
-    curl -fsSL https://tailscale.com/install.sh | sh && \
+# Install Tailscale via official apt repository (avoids curl-pipe-to-shell)
+RUN apt-get update && apt-get install -y --no-install-recommends curl gnupg && \
+    curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg \
+        | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null && \
+    curl -fsSL https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list \
+        | tee /etc/apt/sources.list.d/tailscale.list && \
+    apt-get update && apt-get install -y --no-install-recommends tailscale && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
@@ -30,5 +34,5 @@ EXPOSE 8080
 
 USER nonroot
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-CMD ["/docker-entrypoint.sh"]
+COPY docker-entrypoint.py /app/docker-entrypoint.py
+ENTRYPOINT ["python", "/app/docker-entrypoint.py"]

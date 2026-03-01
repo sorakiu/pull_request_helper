@@ -80,15 +80,15 @@ jobs:
 
       - name: Build and push web Docker image
         run: |
-          docker build -t $WEB_IMAGE:${{ github.sha }} -t $WEB_IMAGE:latest .
-          docker push $WEB_IMAGE:${{ github.sha }}
-          docker push $WEB_IMAGE:latest
+          docker build -t "$WEB_IMAGE:${{ github.sha }}" -t "$WEB_IMAGE:latest" .
+          docker push "$WEB_IMAGE:${{ github.sha }}"
+          docker push "$WEB_IMAGE:latest"
 
       - name: Build and push worker Docker image
         run: |
-          docker build -f backend/Dockerfile.celery -t $WORKER_IMAGE:${{ github.sha }} -t $WORKER_IMAGE:latest .
-          docker push $WORKER_IMAGE:${{ github.sha }}
-          docker push $WORKER_IMAGE:latest
+          docker build -f backend/Dockerfile.celery -t "$WORKER_IMAGE:${{ github.sha }}" -t "$WORKER_IMAGE:latest" .
+          docker push "$WORKER_IMAGE:${{ github.sha }}"
+          docker push "$WORKER_IMAGE:latest"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -121,14 +121,14 @@ jobs:
       - name: Get Cloud Run service URL
         id: get-url
         run: |
-          URL=$(gcloud run services describe pr-helper-web --region=$GCP_REGION --format='value(status.url)')
-          echo "service_url=$URL" >> $GITHUB_OUTPUT
+          URL=$(gcloud run services describe pr-helper-web --region="$GCP_REGION" --format='value(status.url)')
+          echo "service_url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Run database migrations
         run: |
           gcloud run jobs create pr-helper-migrate \
-            --image=$WEB_IMAGE:${{ github.sha }} \
-            --region=$GCP_REGION \
+            --image="$WEB_IMAGE:${{ github.sha }}" \
+            --region="$GCP_REGION" \
             --service-account=pr-helper-cloudrun@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
             --set-env-vars="USE_CLOUD_SQL_CONNECTOR=True" \
             --set-secrets="SECRET_KEY=django-secret-key:latest,GITHUB_CLIENT_ID=github-client-id:latest,GITHUB_CLIENT_SECRET=github-client-secret:latest,DB_PASSWORD=db-password:latest" \
@@ -136,7 +136,7 @@ jobs:
             --command="python" \
             --args="manage.py,migrate,--noinput" \
             --execute-now \
-            --wait || true
+            --wait
 
       - name: Health check validation
         run: |

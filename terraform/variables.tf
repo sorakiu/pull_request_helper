@@ -12,7 +12,12 @@ variable "region" {
 variable "environment" {
   description = "Environment name (e.g., dev, staging, production)"
   type        = string
-  default     = "production"
+  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "staging", "production"], var.environment)
+    error_message = "Environment must be one of: dev, staging, production."
+  }
 }
 
 variable "web_image" {
@@ -40,7 +45,7 @@ variable "db_tier" {
 variable "allowed_hosts" {
   description = "Comma-separated list of allowed hosts for Django"
   type        = string
-  default     = "*"
+  # No default - require explicit configuration for security
 }
 
 variable "allow_public_access" {
@@ -66,4 +71,10 @@ variable "tailscale_auth_key" {
   type        = string
   sensitive   = true
   default     = ""
+}
+
+variable "notification_channels" {
+  description = "List of notification channel IDs for alerting"
+  type        = list(string)
+  default     = []
 }

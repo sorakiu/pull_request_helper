@@ -46,5 +46,4 @@
 9. **Validate guide completeness**
    - Test setup instructions on clean environment
    - Verify all secrets and configurations work
-   - Check for missing steps or unclear instructions</content>
-<parameter name="filePath">openspec/changes/add-deployment-setup-guide/tasks.md
+   - Check for missing steps or unclear instructions

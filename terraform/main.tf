@@ -15,6 +15,15 @@ provider "google" {
   region  = var.region
 }
 
+locals {
+  # Fail fast if Tailscale is enabled without an auth key
+  _tailscale_key_check = (
+    var.tailscale_enabled && var.tailscale_auth_key == ""
+    ? tobool("tailscale_auth_key is required when tailscale_enabled is true")
+    : true
+  )
+}
+
 # Enable required APIs
 resource "google_project_service" "apis" {
   for_each = toset([
@@ -147,6 +156,7 @@ resource "google_redis_instance" "cache" {
   authorized_network = google_compute_network.vpc.id
   redis_version      = "REDIS_7_0"
   display_name       = "PR Helper Redis Cache"
+  auth_enabled       = true
 
   depends_on = [google_project_service.apis]
 }
@@ -178,6 +188,14 @@ resource "google_secret_manager_secret" "github_client_secret" {
 
 resource "google_secret_manager_secret" "tailscale_auth_key" {
   secret_id = "tailscale-auth-key"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_secret_manager_secret" "db_password" {
+  secret_id = "db-password"
   replication {
     auto {}
   }
@@ -531,7 +549,7 @@ resource "google_monitoring_alert_policy" "error_rate" {
     }
   }
 
-  notification_channels = []
+  notification_channels = var.notification_channels
 
   alert_strategy {
     auto_close = "1800s"
