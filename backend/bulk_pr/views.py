@@ -127,6 +127,11 @@ class JobCreateView(APIView):
                 {"error": "repos, source_branch, and dest_branch required"}, status=400
             )
 
+        if not isinstance(repos, list) or not all(isinstance(r, int) for r in repos):
+            return Response(
+                {"error": "repos must be a list of integer repository IDs"}, status=400
+            )
+
         pr_title = request.data.get("pr_title", f"{source_branch} -> {dest_branch}")
         pr_body = request.data.get("pr_body", "")
 

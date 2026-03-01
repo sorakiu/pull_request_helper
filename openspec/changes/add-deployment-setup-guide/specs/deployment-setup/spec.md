@@ -8,7 +8,7 @@ The repository documentation SHALL include step-by-step instructions for setting
 #### Scenario: New Developer Setting Up GCP
 Given a new GCP project
 When following the setup guide
-Then all necessary services (Cloud Run, Cloud SQL, Container Registry, Secret Manager) are configured
+Then all necessary services (Cloud Run, Cloud SQL, Artifact Registry, Secret Manager) are configured
 And appropriate service accounts with correct IAM roles are created
 And billing is enabled for the project.
 

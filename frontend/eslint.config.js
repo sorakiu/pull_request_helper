@@ -15,12 +15,11 @@ export default defineConfig([
     ],
     languageOptions: {
       ecmaVersion: 'latest',
-      globals: globals.browser,
-    },
-    parserOptions: {
-      ecmaVersion: 'latest',
-      ecmaFeatures: { jsx: true },
       sourceType: 'module',
+      globals: globals.browser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
