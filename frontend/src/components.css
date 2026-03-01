@@ -1,0 +1,132 @@
+/* Component Styles */
+
+.login {
+  text-align: center;
+  padding: 2rem;
+}
+
+.login h2 {
+  margin-bottom: 1rem;
+}
+
+.login button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.login button:hover {
+  background-color: #0056b3;
+}
+
+.repo-list {
+  margin-bottom: 2rem;
+}
+
+.repo-list h2 {
+  margin-bottom: 1rem;
+}
+
+.repo-list label {
+  display: block;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.pr-form {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.pr-form h2 {
+  margin-bottom: 1.5rem;
+}
+
+.pr-form label {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.pr-form input,
+.pr-form textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.pr-form input.error,
+.pr-form textarea.error {
+  border-color: #dc3545;
+}
+
+.pr-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.pr-form button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.pr-form button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.pr-form button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* App layout */
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.app h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+/* Logout button */
+.logout-container {
+  text-align: right;
+  margin-bottom: 2rem;
+}
+
+.logout-button {
+  padding: 0.5rem 1rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.logout-button:hover {
+  background-color: #c82333;
+}
